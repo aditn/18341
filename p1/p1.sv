@@ -1,4 +1,4 @@
-module p1_top (
+module p1 (
   output logic [6:0] HEX3, HEX2, HEX1, HEX0,
   output logic [9:0] LEDG,
   input logic  [2:0] BUTTON,
