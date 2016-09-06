@@ -5,7 +5,7 @@ module p1 (
   input logic  CLOCK_50);
 
   logic done, go_l;
-  logic [7:0] valueToinA, tbsum;
+  logic [7:0] valueToinA, tbsum, sumfinalOut;
 
   tatb testbench (.ck(CLOCK_50), .done(done), .reset_l(BUTTON[2]), .Button0(BUTTON[0]), //INPUTS 
    .valueToinA(valueToinA), // OUTPUT: connect this to sumitup’s inA 
