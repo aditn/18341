@@ -18,17 +18,6 @@ module p1 (
   sumitup adderSum(.ck(CLOCK_50), .reset_l(BUTTON2), .go_l(go_l), .inA(valueToinA),
                     .done(done), .sum(sum));
 
-  downStream dsThread(.potVal(sum),.load(done), .clk(CLOCK_50), .rst_l(BUTTON2), .sum(sumfinalOut);
+  downStream dsThread(.potVal(sum),.load(done), .clk(CLOCK_50), .rst_l(BUTTON2), .sum(sumfinalOut));
 
 endmodule p1_top
-
-module downStream
-  (input logic [7:0] potVal,
-   input logic load, clk, rst_l,
-   output logic [7:0] sum);
-
-  always_ff @(posedge clk, negedge rst_l) 
-    if (~reset_l) sum <= 0;
-    else if (load) sum <=potVal;
-
-endmodule downStream
