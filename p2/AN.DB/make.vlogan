@@ -1,0 +1,17 @@
+
+VLOGAN	= vlogan
+VLOGAN_OPT	= -sverilog -q -full64
+
+all :		_VCSgd_Zi5Ulc_1.db \
+	_VCSgd_wcFCpc_1.db \
+
+
+
+_VCSgd_Zi5Ulc_1.db :	romB.v 
+		${VLOGAN}  ${VLOGAN_OPT} romB.v
+
+
+_VCSgd_wcFCpc_1.db :	romA.v 
+		${VLOGAN}  ${VLOGAN_OPT} romA.v
+
+
