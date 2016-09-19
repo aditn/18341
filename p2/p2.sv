@@ -51,8 +51,8 @@ module p2 (
   output[15:0] final_sum, clock_cycle_count,
   output done);
 
-  logic[7:0] romABlocks, romBBlocks, sum_registers, registers,
-             mult, adder_L1, adder_L2, adder_L3, adder_L4, adder_L5;
+  //logic[7:0] romABlocks, romBBlocks, sum_registers, registers,
+  //           mult, adder_L1, adder_L2, adder_L3, adder_L4, adder_L5;
 
   logic[5:0] romB_addr;
   logic[11:0] romA_addr;
@@ -67,7 +67,7 @@ module p2 (
   logic[7:0]  doneValB;
   logic doneA, doneB;
 
-  assign romABlocks = 13;
+  /*assign romABlocks = 13;
   assign romBBlocks = 4;
   assign sum_registers = 64;
   assign registers = 64;
@@ -76,7 +76,7 @@ module p2 (
   assign adder_L2 = 32;
   assign adder_L3 = 16;
   assign adder_L4 = 8;
-  assign adder_L5 = 4;
+  assign adder_L5 = 4;*/
 
   assign doneValA = 64*64-1;
   assign doneValB = 63;
@@ -84,7 +84,7 @@ module p2 (
 
   // Instantiate counter for keeping track of clock cycles
   counterPlain clock_counter(.clock(clock),
-                             .reset(reset_l),
+                             .reset_l(reset_l),
                              .enable(~done),
                              .q(clock_cycle_count));
 
@@ -107,7 +107,7 @@ module p2 (
   genvar i,j,k,l,m,n,q,r,s,t;
   generate
     // Instantiate 13 romA blocks (26 vals/clk cycle)
-    for (i = 0; i < romABlocks - 1; i++) begin: romAblock
+    for (i = 0; i < 12; i++) begin: romAblock
       romA romA_blocks(.address_a(romA_addr+2*i),
                        .address_b(romA_addr+2*i+1),
                        .clock(clock),
@@ -116,7 +116,7 @@ module p2 (
     end
 
     // Instantiate 4 romB blocks (8 vals/clk cycle)
-    for (j = 0; j < romBBlocks - 1; j++) begin: romBblock
+    for (j = 0; j < 3; j++) begin: romBblock
       romB romB_blocks(.address_a(romB_addr+2*j),
                        .address_b(romBBlocks+2*j+1),
                        .clock(clock),
@@ -125,7 +125,7 @@ module p2 (
     end
 
     // Instantiate 64 sum_registers for matrix A
-    for (k = 0; k < sum_registers - 1; k++) begin: sumRegs
+    for (k = 0; k < 63; k++) begin: sumRegs
       sum_register sum_register_A(.clock(clock),
                                   .enable(~doneA),
                                   .reset_l(reset_l),
@@ -134,7 +134,7 @@ module p2 (
     end
 
     // Instantiate 64 registers for matrix B
-    for (l = 0; l < registers - 1; l++) begin: regs
+    for (l = 0; l < 63; l++) begin: regs
       register register_B(.clock(clock),
                           .enable(~doneB),
                           .reset_l(reset_l),
@@ -143,42 +143,43 @@ module p2 (
     end
 
     // Instantiate 64 multipliers
-    for (m = 0; m < mult - 1; m++) begin: mults
+    for (m = 0; m < 63; m++) begin: mults
       multiplier multi(.dataa(col_A_out[m]),
-                       .datab(row_B_out[m]),
-                       .result(mult_result[m]));
+                        .datab(row_B_out[m]),
+                        .result(mult_result[m]));
     end
 
     // Instantiate first layer of adders after multipliers
-    for (n = 0; n < adder_L1 - 1; n=n+2) begin: aL1
+    for (n = 0; n < 63; n=n+2) begin: aL1
       adder addL1(.a(mult_result[n]),
                   .b(mult_result[n+1]),
                   .sum(addL1_result[n/2]));
     end
 
     // Instantiate second layer of adders after multipliers
-    for (q = 0; q < adder_L2 - 1; q=q+2) begin: aL2
+    for (q = 0; q < 31; q=q+2) begin: aL2
       adder addL2(.a(addL1_result[q]),
                   .b(addL1_result[q+1]),
                   .sum(addL2_result[q/2]));
     end
 
     // Instantiate third layer of adders after multipliers
-    for (r = 0; r < adder_L3 - 1; r=r+2) begin: aL3
+    for (r = 0; r < 15; r=r+2) begin: aL3
       adder addL3(.a(addL2_result[r]),
                   .b(addL2_result[r+1]),
                   .sum(addL3_result[r/2]));
     end
 
     // Instantiate fourth layer of adders after multipliers
-    for (s = 0; s < adder_L4 - 1; s=s+2) begin: aL4
+    for (s = 0; s < 7; s=s+2) begin: aL4
       adder addL4(.a(addL3_result[s]),
                   .b(addL3_result[s+1]),
                   .sum(addL4_result[s/2]));
     end
 
     // Instantiate fifth layer of adders after multipliers
-    for (t = 0; t < adder_L5 - 1; t=t+2) begin: aL5
+
+    for (t = 0; t < 3; t=t+2) begin: aL5
       adder addL5(.a(addL4_result[t]),
                   .b(addL4_result[t+1]), 
                   .sum(addL5_result[t/2]));
