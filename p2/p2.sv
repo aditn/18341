@@ -106,23 +106,30 @@ module p2 (
 
   genvar i,j,k,l,m,n,q,r,s,t;
   generate
-    // Instantiate 13 romA blocks (26 vals/clk cycle)
-    for (i = 0; i < 12; i++) begin
+    // Instantiate 8 romA blocks (26 vals/clk cycle)
+    for (i = 0; i < 16; i=i+2) begin
       // TODO: solve problem when this goes over bounds for addresses
-      romA romA_blocks(.address_a(romA_addr+2*i),
-                       .address_b(romA_addr+2*i+1),
+      romA romA_blocks(.address_a(romA_addr*16+i),
+                       .address_b(romA_addr*16+i+1),
                        .clock(clock),
-                       .q_a(col_A[i]),
-                       .q_b(col_A[i+1]));
+                       .q_a(col_A[romA_addr*16+i]),
+                       .q_b(col_A[romA_addr*16+i+1]));
     end
 
     // Instantiate 4 romB blocks (8 vals/clk cycle)
-    for (j = 0; j < 3; j++) begin
-      romB romB_blocks(.address_a(romB_addr+2*j),
-                       .address_b(romBBlocks+2*j+1),
+    for (j = 0; j < 16; j=j+2) begin
+      romB romB_blocks(.address_a(romB_addr),
+                       .address_b(romB_addr+1),
                        .clock(clock),
-                       .q_a(row_B[j]),
-                       .q_b(row_B[j+1]));
+                       .q_a(row_B[romB_addr]),
+                       .q_b(row_B[romB_addr+1]));
+    end
+
+    // Instantiate 64 multipliers
+    for (m = 0; m < 63; m++) begin
+      multipliers multi(.dataa(col_A_out[m]),
+                        .datab(row_B_out[m]),
+                        .result(mult_result[m]));
     end
 
     // Instantiate 64 sum_registers for matrix A
@@ -141,13 +148,6 @@ module p2 (
                           .reset_l(reset_l),
                           .d(row_B[l]),
                           .q(row_B_out[l]));
-    end
-
-    // Instantiate 64 multipliers
-    for (m = 0; m < 63; m++) begin
-      multipliers multi(.dataa(col_A_out[m]),
-                        .datab(row_B_out[m]),
-                        .result(mult_result[m]));
     end
 
     // Instantiate first layer of adders after multipliers
