@@ -51,148 +51,96 @@ module p2 (
   output[15:0] final_sum, clock_cycle_count,
   output done);
 
-  //logic[7:0] romABlocks, romBBlocks, sum_registers, registers,
-  //           mult, adder_L1, adder_L2, adder_L3, adder_L4, adder_L5;
+  logic[5:0] romB_addr_index;
+  logic[11:0] romA_addr_index;
 
-  logic[5:0] romB_addr;
-  logic[11:0] romA_addr;
+  logic[127:0] halfRowReady;
+  logic[63:0][7:0] col_A_read, row_B_read;
+  logic[63:0][15:0] mult_result;
 
-  logic[7:0] col_A[64]. row_B[64], row_B_out[64];
-  logic[15:0] col_A_out[64], mult_result[64], 
-              addL1_result[32], addL2_result[16],
-              addL3_result[8], addL4_result[4],
-              addL5_result[2];
+  logic load_doneA, load_doneB;
 
-  logic[31:0] doneValA;
-  logic[7:0]  doneValB;
-  logic done, doneA, doneB;
+  counter #(.INCREMENT(16))
+          romA_address(.clock(clock),
+                       .reset_l(reset_l),
+                       .doneVal(4096),
+                       .done(done),
+                       .q(romA_addr_index));
+  
+  counter #(.WIDTH(6),.INCREMENT(16))
+          romB_address(.clock(clock),
+                       .reset_l(reset_l),
+                       .doneVal(),
+                       .done(),
+                       .q(romB_addr_index));
 
-  /*assign romABlocks = 13;
-  assign romBBlocks = 4;
-  assign sum_registers = 64;
-  assign registers = 64;
-  assign mult = 64;
-  assign adder_L1 = 64;
-  assign adder_L2 = 32;
-  assign adder_L3 = 16;
-  assign adder_L4 = 8;
-  assign adder_L5 = 4;*/
+  genvar a,b,c,d,e,f,g,h;
 
-  assign doneValA = 64*64-1;
-  assign doneValB = 63;
-  assign done = doneA;
-
-  // Instantiate counter for keeping track of clock cycles
-  counterPlain clock_counter(.clock(clock),
-                             .reset(reset_l),
-                             .enable(~done),
-                             .q(clock_cycle_count));
-
-  // Instantiate counter register for address to romA
-  counter romA_addr_counter(.clock(clock),
-                            .reset_l(reset_l),
-                            .done(doneA),
-                            .doneVal(doneValA),
-                            .q(romA_addr));
-
-  // Instantiate counter register for address to romB
-  counter #(.WIDTH(6), .DONE_WIDTH(32))
-         romB_addr_counter (.clock(clock),
-                            .reset_l(reset_l),
-                            .done(doneB),
-                            .doneVal(doneValB),
-                            .q(romB_addr));
-
-
-  genvar i,j,k,l,m,n,q,r,s,t;
   generate
-    // Instantiate 8 romA blocks (26 vals/clk cycle)
-    for (i = 0; i < 16; i=i+2) begin
-      // TODO: solve problem when this goes over bounds for addresses
-      romA romA_blocks(.address_a(romA_addr*16+i),
-                       .address_b(romA_addr*16+i+1),
-                       .clock(clock),
-                       .q_a(col_A[romA_addr*16+i]),
-                       .q_b(col_A[romA_addr*16+i+1]));
-    end
+    // Instantiate 8 romA blocks
+    for (a = 0; a < 16; i = i + 2) begin: romAInst
+      romA rom_A_blocks(.address_a(a + romA_addr_index),
+                        .address_b(a + romA_addr_index + 1),
+                        .clock(clock),
+                        .q_a(col_A_read[a + romA_addr_index]),
+                        .q_b(col_A_read[a + romA_addr_index + 1]));
+    end: romAInst
 
-    // Instantiate 4 romB blocks (8 vals/clk cycle)
-    for (j = 0; j < 16; j=j+2) begin
-      romB romB_blocks(.address_a(romB_addr),
-                       .address_b(romB_addr+1),
-                       .clock(clock),
-                       .q_a(row_B[romB_addr]),
-                       .q_b(row_B[romB_addr+1]));
-    end
+    // Instantiate 8 romB blocks
+    for (b = 0; b < 16; b = b + 2) begin: romBInst
+      romB rom_B_blocks(.address_a(b + romB_addr_index),
+                        .address_b(b+1 + romB_addr_index),
+                        .clock(clock),
+                        .q_a(row_B_read[b + romB_addr_index]),
+                        .q_b(row_B_read[b + romB_addr_index + 1]));
+    end: romBInst
 
-    // Instantiate 64 multipliers
-    for (m = 0; m < 63; m++) begin
-      multipliers multi(.dataa(col_A_out[m]),
-                        .datab(row_B_out[m]),
-                        .result(mult_result[m]));
-    end
+    // Instantiate 16 multipliers
+    for (c = 0; c < 16; c++) begin: multInst
+      multiplier multi(.dataa(col_A_read[c + romA_addr_index]),
+                       .datab(row_B_read[c + romB_addr_index]),
+                       .result(mult_result[]));
+    end: multInst
 
-    // Instantiate 64 sum_registers for matrix A
-    for (k = 0; k < 63; k++) begin
-      sum_register sum_register_A(.clock(clock),
-                                  .enable(~doneA),
-                                  .reset_l(reset_l),
-                                  .d(col_A[k]),
-                                  .q(col_A_out[k]));
-    end
+    // Instantiate 8 adders for first layer
+    for (d = 0; d < 8; d++) begin: adderL1 
+      adder addL1(.a(mult_result[d]),
+                  .b(mult_result[d+8]),
+                  .c(addL1_out[d]));
+    end: adderL1
 
-    // Instantiate 64 registers for matrix B
-    for (l = 0; l < 63; l++) begin
-      register register_B(.clock(clock),
-                          .enable(~doneB),
-                          .reset_l(reset_l),
-                          .d(row_B[l]),
-                          .q(row_B_out[l]));
-    end
-
-    // Instantiate first layer of adders after multipliers
-    for (n = 0; n < 63; n=n+2) begin
-      adder addL1(.a(mult_result[n]),
-                  .b(mult_result[n+1]),
-                  .sum(addL1_result[n/2]));
-    end
-
-    // Instantiate second layer of adders after multipliers
-    for (q = 0; q < 31; q=q+2) begin
-      adder addL2(.a(addL1_result[q]),
-                  .b(addL1_result[q+1]),
-                  .sum(addL2_result[q/2]));
-    end
-
-    // Instantiate third layer of adders after multipliers
-    for (r = 0; r < 15; r=r+2) begin
-      adder addL3(.a(addL2_result[r]),
-                  .b(addL2_result[r+1]),
-                  .sum(addL3_result[r/2]));
-    end
-
-    // Instantiate fourth layer of adders after multipliers
-    for (s = 0; s < 7; s=s+2) begin
-      adder addL4(.a(addL3_result[s]),
-                  .b(addL3_result[s+1]),
-                  .sum(addL4_result[s/2]));
-    end
-
-    // Instantiate fifth layer of adders after multipliers
-    for (t = 0; t < 3; t=t+2) begin
-      adder addL5(.a(addL4_result[t]),
-                  .b(addL4_result[t+1]), 
-                  .sum(addL5_result[t/2]));
-    end
+    // Instantiate 4 adders for second layer
+    for (e = 0; e < 4; e++) begin: adderL2 
+      adder addL2(.a(addL1_out[e]),
+                  .b(addL1_out[e+4]),
+                  .c(addL2_out[e]));
+    end: adderL2
+    
+    // Instantiate 2 adders for 3rd layer
+    for (f = 0; f < 2; f++) begin: adderL3 
+      adder addL3(.a(addL2_out[f]),
+                  .b(addL2_out[f+2]),
+                  .c(addL3_out[f]));
+    end: adderL3
 
   endgenerate
 
-  // Instantiate adder to calculate final sum
-  adder addL6(.a(addL5_result[0]),
-              .b(addL5_result[1]),
-              .sum(final_sum));
+  // Instantiate final adder
+  adder addL4(.a(addL3_out[0]),
+              .b(addL3_out[1]),
+              .c(final_sum_in));
 
+  // Instantiate sum_register for final sum
+  sum_register regFinal(.clock(clock),
+                    .enable(~done),
+                    .reset_l(reset_l),
+                    .d(final_sum_in),
+                    .q(final_sum_out));
 
+  // Instantiate counter to keep track of clock cycles
+  counterPlain clock_cycle_count(.clock(clock),
+                                 .reset_l(reset_l),
+                                 .q(clock_cycle_count));
 
 endmodule
 
@@ -211,12 +159,14 @@ endmodule
 
 
 module counter (
-  input clock, reset_l, done,
+  input clock, reset_l,
   input[DONE_WIDTH-1:0] doneVal,
+  output done,
   output[WIDTH-1:0] q);
 
   parameter WIDTH = 12;
   parameter DONE_WIDTH = 32;
+  parameter INCREMENT = 1;
 
   always @(posedge clock or negedge reset_l)
     if (~reset_l) begin
@@ -224,7 +174,7 @@ module counter (
       done = 0;
     end
     else begin
-      q <= q + 1;
+      q <= q + INCREMENT;
       done = 0;
       if (q == doneVal)
         done = 1;
@@ -235,8 +185,10 @@ endmodule
 
 module register (
   input clock, enable, reset_l,
-  input[7:0] d,
-  output[7:0] q);  
+  input[WIDTH-1:0] d,
+  output[WIDTH-1:0] q);
+
+  parameter WIDTH = 8;  
 
   always @(posedge clock or negedge reset_l)
     if (~reset_l)
@@ -257,6 +209,8 @@ module sum_register (
       q <= 0;
     else if (enable)
       q <= q + d;
+    else
+      q <= q;
 
 endmodule
 

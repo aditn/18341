@@ -41,8 +41,8 @@ module multiplier (
 	datab,
 	result);
 
-	input	[15:0]  dataa;
-	input	[15:0]  datab;
+	input	[7:0]  dataa;
+	input	[7:0]  datab;
 	output	[15:0]  result;
 
 	wire [15:0] sub_wire0;
@@ -60,8 +60,8 @@ module multiplier (
 		lpm_mult_component.lpm_hint = "MAXIMIZE_SPEED=5",
 		lpm_mult_component.lpm_representation = "UNSIGNED",
 		lpm_mult_component.lpm_type = "LPM_MULT",
-		lpm_mult_component.lpm_widtha = 16,
-		lpm_mult_component.lpm_widthb = 16,
+		lpm_mult_component.lpm_widtha = 8,
+		lpm_mult_component.lpm_widthb = 8,
 		lpm_mult_component.lpm_widthp = 16;
 
 
