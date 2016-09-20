@@ -51,9 +51,6 @@ module main(
   output[15:0] final_sum_out, clock_cycle_count,
   output done);
 
-  logic doneIgnore;
-  logic[5:0] doneValueIgnore;
-
   logic[5:0] romB_addr_index;
   logic[12:0] romA_addr_index;
 
@@ -66,12 +63,20 @@ module main(
 
   logic[15:0] final_sum_in;
 
-  assign done = (romA_addr_index >= 4096) ? 1'd1 : 1'd0;
+  logic[2:0] testVal;
+
+  assign done = (testVal>= 2) ? 1'd1 : 1'd0;
+
+  counter #(.WIDTH(3),.INCREMENT(1))
+          test(.clock(clock),
+                       .reset_l(reset_l),
+                       .enable(~done),
+                       .q(testVal));
 
   counter #(.WIDTH(13),.INCREMENT(16))
           romA_address(.clock(clock),
                        .reset_l(reset_l),
-                       .enable(1),
+                       .enable(~done),
                        .q(romA_addr_index));
   
   counter #(.WIDTH(6),.INCREMENT(16))
@@ -80,9 +85,22 @@ module main(
                        .enable(1),
                        .q(romB_addr_index));
 
-  genvar a,b,c,d,e,f,g,h;
+  romA rom_A_blocks(.address_a(0),
+                        .address_b(1),
+                        .clock(clock),
+                        .q_a(final_sum_in),
+                        .q_b());
 
-  generate
+  // Instantiate sum_register for final sum
+  sum_register regFinal(.clock(clock),
+                    .enable(~done),
+                    .reset_l(reset_l),
+                    .d(final_sum_in),
+                    .q(final_sum_out));
+
+  //genvar a,b,c,d,e,f,g,h;
+
+  /*generate
     // Instantiate 8 romA blocks
     for (a = 0; a < 16; a = a + 2) begin: romAInst
       romA rom_A_blocks(.address_a(a + romA_addr_index),
@@ -166,7 +184,7 @@ module main(
                               .reset_l(reset_l),
                               .enable(1),
                               .q(clock_cycle_count));
-
+*/
 endmodule
 
 
