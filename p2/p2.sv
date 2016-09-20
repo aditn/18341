@@ -1,4 +1,4 @@
-module ChipInterface (
+module p2 (
   input logic CLOCK_50,
   input logic [9:0] SW,
   input logic [2:0] BUTTON,
@@ -9,7 +9,7 @@ module ChipInterface (
   logic[15:0] clock_cycle_count, clock_cycle_count_out;
 
   // Instantiate p2 module for matrix multiplication
-  p2 p2Mod(.clock(CLOCK_50),
+  main mainMod(.clock(CLOCK_50),
            .reset_l(BUTTON[0]),
            .final_sum_out(answer),
            .clock_cycle_count(clock_cycle_count),
@@ -46,7 +46,7 @@ module ChipInterface (
 endmodule
 
 
-module p2 (
+module main(
   input clock, reset_l,
   output[15:0] final_sum_out, clock_cycle_count,
   output done);
@@ -175,7 +175,7 @@ module counter (
   output[WIDTH-1:0] q);
 
   parameter WIDTH = 12;
-  parameter INCREMENT[WIDTH-1:0] = 1;
+  parameter INCREMENT = 1;
 
   always @(posedge clock or negedge reset_l)
     if (~reset_l)
