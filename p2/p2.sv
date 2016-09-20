@@ -57,15 +57,19 @@ module p2 (
   logic[5:0] romB_addr;
   logic[11:0] romA_addr;
 
-  logic[7:0] col_A[64], row_B[64], row_B_out[64];
-  logic[15:0] col_A_out[64], mult_result[64], 
-              addL1_result[32], addL2_result[16],
-              addL3_result[8], addL4_result[4],
-              addL5_result[2];
+  logic[63:0][7:0] col_A, row_B, row_B_out;
+  logic[15:0][63:0] col_A_out, mult_result;
+  logic[15:0][31:0] addL1_result;
+  logic[15:0][15:0] addL2_result;
+  logic[15:0][7:0] addL3_result;
+  logic[15:0][3:0] addL4_result;
+  logic[15:0][1:0] addL5_result;
 
   logic[31:0] doneValA;
   logic[7:0]  doneValB;
   logic doneA, doneB;
+  
+  logic[31:0] index_counter;
 
   /*assign romABlocks = 13;
   assign romBBlocks = 4;
@@ -78,12 +82,18 @@ module p2 (
   assign adder_L4 = 8;
   assign adder_L5 = 4;*/
 
-  assign doneValA = 64*64-1;
-  assign doneValB = 63;
+  assign doneValA = 64*64-1-12+2;
+  assign doneValB = 63-4+2;
   assign done = doneA;
 
+  // Instantiate counter for keeping track vector index
+  counterPlain clock_counter1(.clock(clock),
+                             .reset_l(reset_l),
+                             .enable(1),
+                             .q(index_counter));
+  
   // Instantiate counter for keeping track of clock cycles
-  counterPlain clock_counter(.clock(clock),
+  counterPlain clock_counter2(.clock(clock),
                              .reset_l(reset_l),
                              .enable(~done),
                              .q(clock_cycle_count));
@@ -107,12 +117,12 @@ module p2 (
   genvar i,j,k,l,m,n,q,r,s,t;
   generate
     // Instantiate 13 romA blocks (26 vals/clk cycle)
-    for (i = 0; i < 12; i++) begin: romAblock
-      romA romA_blocks(.address_a(romA_addr+2*i),
-                       .address_b(romA_addr+2*i+1),
+    for (i = 0; i < 25; i=i+2) begin: romAblock
+      romA romA_blocks(.address_a(i+12*romA_addr),
+                       .address_b(i+12*romA_addr+1),
                        .clock(clock),
-                       .q_a(col_A[i]),
-                       .q_b(col_A[i+1]));
+                       .q_a(col_A[i+2*index_counter]),
+                       .q_b(col_A[i+2*index_counter+1]));
     end
 
     // Instantiate 4 romB blocks (8 vals/clk cycle)
@@ -120,8 +130,8 @@ module p2 (
       romB romB_blocks(.address_a(romB_addr+2*j),
                        .address_b(romBBlocks+2*j+1),
                        .clock(clock),
-                       .q_a(row_B[j]),
-                       .q_b(row_B[j+1]));
+                       .q_a(row_B[j+2*index_counter]),
+                       .q_b(row_B[j+2*index_counter+1]));
     end
 
     // Instantiate 64 sum_registers for matrix A
